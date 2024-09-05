@@ -44,10 +44,18 @@ middleware.checkPrivileges = helpers.try(async (req, res, next) => {
 		if (!await privileges.admin.can(privilege, req.uid)) {
 			return controllers.helpers.notAllowed(req, res);
 		}
-	} else if (checkprivilegeSet(req.uid)) {
+	} else if (await checkprivilegeSet(req.uid)) {
 		// If accessing /admin, check for any valid admin privs
 		return controllers.helpers.notAllowed(req, res);
 	}
+	/* else {
+		// If accessing /admin, check for any valid admin privs
+		const privilegeSet = await privileges.admin.get(req.uid);
+		if (!Object.values(privilegeSet).some(Boolean)) {
+			return controllers.helpers.notAllowed(req, res);
+		}
+	}
+	tested and works! two cognitive complexities removed */
 
 	// If user does not have password
 	const hasPassword = await user.hasPassword(req.uid);
@@ -69,6 +77,15 @@ middleware.checkPrivileges = helpers.try(async (req, res, next) => {
 
 		return next();
 	}
+	/* if (disabled || (loginTime && parseInt(loginTime, 10) > Date.now() - adminReloginDuration)) {
+		const timeLeft = parseInt(loginTime, 10) - (Date.now() - adminReloginDuration);
+		if (req.session.meta && timeLeft < Math.min(60000, adminReloginDuration)) {
+			req.session.meta.datetime += Math.min(60000, adminReloginDuration);
+		}
+
+		return next();
+	}
+	tested and works! one cognitive complexity removed */
 
 	let returnTo = req.path;
 	if (nconf.get('relative_path')) {
@@ -89,4 +106,11 @@ middleware.checkPrivileges = helpers.try(async (req, res, next) => {
 		return;
 	}
 	res.redirect(`${nconf.get('relative_path')}/login?local=1`);
+	/* if (res.locals.isAPI) {
+		controllers.helpers.formatApiResponse(401, res);
+	} else {
+		res.redirect(`${nconf.get('relative_path')}/login?local=1`);
+	}
+	tested and works! one cognitive complexity removed
+	*/
 });
